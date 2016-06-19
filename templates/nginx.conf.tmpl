@@ -9,114 +9,6 @@ events {
     worker_connections  1024;
 }
 
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log  /var/log/nginx/access.log  main;
-
-    sendfile        on;
-
-    keepalive_timeout  65;
-
-	server {
-		listen 80;
-
-		location / {
-			root /www;
-		}
-
-    location /p/ {
-      secure_link_secret "${PUBLISH_SECRET}";
-
-      if ($secure_link = "") {
-          return 403;
-      }
-
-      rewrite ^ /secure/$secure_link;
-    }
-
-    location /secure/stat {
-
-      if ($http_origin ~* ${CORS_HTTP_ORIGIN}) {
-          set $cors "true";
-      }
-
-      if ($request_method = 'OPTIONS') {
-          set $cors "${cors}options";
-      }
-
-      if ($request_method = 'GET') {
-          set $cors "${cors}get";
-      }
-
-      if ($cors = "trueget") {
-          add_header 'Access-Control-Allow-Origin' "$http_origin";
-          add_header 'Access-Control-Allow-Credentials' 'true';
-      }
-
-      if ($cors = "trueoptions") {
-          add_header 'Access-Control-Allow-Origin' "$http_origin";
-          add_header 'Access-Control-Allow-Credentials' 'true';
-          add_header 'Access-Control-Max-Age' 1728000;
-          add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-          add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
-          add_header 'Content-Length' 0;
-          add_header 'Content-Type' 'text/plain charset=UTF-8';
-          return 204;
-      }
-
-      internal;
-      rtmp_stat all;
-    }
-
-    location /secure/info {
-
-      if ($http_origin ~* ${CORS_HTTP_ORIGIN}) {
-          set $cors "true";
-      }
-
-      if ($request_method = 'OPTIONS') {
-          set $cors "${cors}options";
-      }
-
-      if ($request_method = 'GET') {
-          set $cors "${cors}get";
-      }
-
-      if ($cors = "trueget") {
-          add_header 'Access-Control-Allow-Origin' "$http_origin";
-          add_header 'Access-Control-Allow-Credentials' 'true';
-      }
-
-      if ($cors = "trueoptions") {
-          add_header 'Access-Control-Allow-Origin' "$http_origin";
-          add_header 'Access-Control-Allow-Credentials' 'true';
-          add_header 'Access-Control-Max-Age' 1728000;
-          add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-          add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
-          add_header 'Content-Length' 0;
-          add_header 'Content-Type' 'text/plain charset=UTF-8';
-          return 204;
-      }
-
-      internal;
-      rtmp_stat all;
-      rtmp_stat_stylesheet /info.xsl;
-    }
-
-    location /info.xsl {
-        root /www;
-    }
-
-  }
-
-}
-
 rtmp_auto_push on;
 
 rtmp {
@@ -135,11 +27,8 @@ rtmp {
             allow play 127.0.0.1;
             deny play all;
 
-            on_publish ${PUBLISH_HOOK};
-            on_publish_done ${PUBLISH_HOOK};
-
-            on_play ${PLAY_HOOK};
-            on_play_done ${PLAY_HOOK};
+            on_publish ${RTMP_HOOK};
+            on_publish_done ${RTMP_HOOK};
 
             exec_push /usr/local/bin/ffmpeg -i rtmp://localhost/pub_${PUBLISH_SECRET}/$name;
         }
